@@ -1,1 +1,3 @@
 name: PPO
+layer_size: 128
+entropy_bonus: 0.

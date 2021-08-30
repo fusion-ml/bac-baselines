@@ -1,2 +1,3 @@
-name: "pilcocartpole-v0"
+name: "pilcocartpole-trig-v0"
 timesteps: 100000
+max_path_length: 25

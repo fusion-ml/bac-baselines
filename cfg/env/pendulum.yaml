@@ -1,2 +1,3 @@
 name: "bacpendulum-v0"
 timesteps: 20000
+max_path_length: 200

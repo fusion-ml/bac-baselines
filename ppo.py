@@ -1,0 +1,114 @@
+"""
+Use PPO on BAC tasks
+"""
+import hydra
+import gym
+import gym
+import bax.util.envs
+from bax.util.misc_util import Dumper
+
+import rlkit.torch.pytorch_util as ptu
+from rlkit.data_management.advantage_buffer import AdvantageReplayBuffer
+from rlkit.envs.wrappers import NormalizedBoxEnv
+from rlkit.launchers.launcher_util import setup_logger
+from rlkit.samplers.data_collector import MdpPathCollector
+from rlkit.torch.sac.policies import TanhGaussianPolicy, MakeDeterministic
+from rlkit.torch.policy_gradient import PPOTrainer
+from rlkit.torch.networks import Mlp
+from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
+
+
+def experiment(env_name, variant):
+    eval_env = NormalizedBoxEnv(gym.make(env_name))
+    expl_env = NormalizedBoxEnv(gym.make(env_name))
+    obs_dim = expl_env.observation_space.low.size
+    action_dim = eval_env.action_space.low.size
+
+    M = variant['layer_size']
+    valf = Mlp(
+        input_size=obs_dim,
+        output_size=1,
+        hidden_sizes=[M, M],
+    )
+    policy = TanhGaussianPolicy(
+        obs_dim=obs_dim,
+        action_dim=action_dim,
+        hidden_sizes=[M, M],
+        **variant['policy_kwargs'],
+    )
+    eval_policy = MakeDeterministic(policy)
+    eval_path_collector = MdpPathCollector(
+        eval_env,
+        eval_policy,
+    )
+    expl_path_collector = MdpPathCollector(
+        expl_env,
+        policy,
+    )
+    replay_buffer = AdvantageReplayBuffer(
+        variant['replay_buffer_size'],
+        expl_env,
+        valf,
+        discount=variant['trainer_kwargs']['discount'],
+        **variant['target_kwargs']
+    )
+    trainer = PPOTrainer(
+        env=eval_env,
+        policy=policy,
+        val=valf,
+        **variant['trainer_kwargs']
+    )
+    algorithm = TorchBatchRLAlgorithm(
+        trainer=trainer,
+        exploration_env=expl_env,
+        evaluation_env=eval_env,
+        exploration_data_collector=expl_path_collector,
+        evaluation_data_collector=eval_path_collector,
+        replay_buffer=replay_buffer,
+        **variant['algorithm_kwargs']
+    )
+    algorithm.to(ptu.device)
+    algorithm.train()
+
+
+@hydra.main(config_path='cfg', config_name='rlkit')
+def main(config):
+    variant = dict(
+        algorithm="PPO",
+        version="normal",
+        layer_size=config.alg.layer_size,
+        replay_buffer_size=int(1E6),
+        algorithm_kwargs=dict(
+            num_epochs=config.num_epochs,
+            num_eval_steps_per_epoch=1000,
+            num_trains_per_train_loop=100,
+            num_expl_steps_per_train_loop=2048,
+            min_num_steps_before_training=0,
+            num_train_loops_per_epoch=1,
+            max_path_length=config.env.max_path_length,
+            batch_size=256,
+            clear_buffer_every_train_loop=True,
+        ),
+        trainer_kwargs=dict(
+            epsilon=0.2,
+            discount=config.discount,
+            policy_lr=3E-4,
+            val_lr=3E-4,
+            entropy_bonus=config.alg.entropy_bonus,
+        ),
+        target_kwargs=dict(
+            tdlambda=0.95,
+            target_lookahead=15,
+        ),
+        policy_kwargs=dict(
+            std=config.fixed_std,
+        ),
+    )
+    setup_logger(config.name, variant=variant)
+    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
+    experiment(config.env.name, variant)
+
+
+
+if __name__ == "__main__":
+    main()
