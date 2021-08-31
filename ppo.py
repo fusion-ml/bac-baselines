@@ -4,7 +4,7 @@ Use PPO on BAC tasks
 import hydra
 import gym
 import gym
-import bax.util.envs
+import bax.envs
 from bax.util.misc_util import Dumper
 
 import rlkit.torch.pytorch_util as ptu

@@ -1,5 +1,5 @@
 import gym
-import bax.util.envs
+import bax.envs
 from bax.util.misc_util import Dumper
 from stable_baselines3 import PPO, SAC, TD3
 from stable_baselines3.common.env_checker import check_env
