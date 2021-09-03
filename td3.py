@@ -1,5 +1,5 @@
 """
-Use PPO on BAC tasks
+Use SAC on BAC tasks
 """
 import hydra
 import gym
@@ -8,13 +8,15 @@ import bax.envs
 from bax.util.misc_util import Dumper
 
 import rlkit.torch.pytorch_util as ptu
-from rlkit.data_management.advantage_buffer import AdvantageReplayBuffer
+from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.envs.wrappers import NormalizedBoxEnv
+from rlkit.exploration_strategies.base import \
+    PolicyWrappedWithExplorationStrategy
+from rlkit.exploration_strategies.gaussian_strategy import GaussianStrategy
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector import MdpPathCollector
-from rlkit.torch.sac.policies import TanhGaussianPolicy, MakeDeterministic
-from rlkit.torch.policy_gradient import PPOTrainer
-from rlkit.torch.networks import Mlp
+from rlkit.torch.td3.td3 import TD3Trainer
+from rlkit.torch.networks import FlattenMlp, TanhMlpPolicy
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 
 
@@ -25,37 +27,64 @@ def experiment(env_name, variant):
     action_dim = eval_env.action_space.low.size
 
     M = variant['layer_size']
-    valf = Mlp(
-        input_size=obs_dim,
+    qf1 = FlattenMlp(
+        input_size=obs_dim + action_dim,
         output_size=1,
         hidden_sizes=[M, M],
     )
-    policy = TanhGaussianPolicy(
-        obs_dim=obs_dim,
-        action_dim=action_dim,
+    qf2 = FlattenMlp(
+        input_size=obs_dim + action_dim,
+        output_size=1,
         hidden_sizes=[M, M],
-        **variant['policy_kwargs'],
     )
-    eval_policy = MakeDeterministic(policy)
+    target_qf1 = FlattenMlp(
+        input_size=obs_dim + action_dim,
+        output_size=1,
+        hidden_sizes=[M, M],
+    )
+    target_qf2 = FlattenMlp(
+        input_size=obs_dim + action_dim,
+        output_size=1,
+        hidden_sizes=[M, M],
+    )
+    policy = TanhMlpPolicy(
+        input_size=obs_dim,
+        output_size=action_dim,
+        **variant['policy_kwargs']
+    )
+    target_policy = TanhMlpPolicy(
+        input_size=obs_dim,
+        output_size=action_dim,
+        **variant['policy_kwargs']
+    )
+    es = GaussianStrategy(
+        action_space=expl_env.action_space,
+        max_sigma=0.1,
+        min_sigma=0.1,  # Constant sigma
+    )
+    exploration_policy = PolicyWrappedWithExplorationStrategy(
+        exploration_strategy=es,
+        policy=policy,
+    )
     eval_path_collector = MdpPathCollector(
         eval_env,
-        eval_policy,
+        policy,
     )
     expl_path_collector = MdpPathCollector(
         expl_env,
-        policy,
+        exploration_policy,
     )
-    replay_buffer = AdvantageReplayBuffer(
+    replay_buffer = EnvReplayBuffer(
         variant['replay_buffer_size'],
         expl_env,
-        valf,
-        discount=variant['trainer_kwargs']['discount'],
-        **variant['target_kwargs']
     )
-    trainer = PPOTrainer(
-        env=eval_env,
+    trainer = TD3Trainer(
         policy=policy,
-        val=valf,
+        qf1=qf1,
+        qf2=qf2,
+        target_qf1=target_qf1,
+        target_qf2=target_qf2,
+        target_policy=target_policy,
         **variant['trainer_kwargs']
     )
     algorithm = TorchBatchRLAlgorithm(
@@ -74,7 +103,7 @@ def experiment(env_name, variant):
 @hydra.main(config_path='cfg', config_name='rlkit')
 def main(config):
     variant = dict(
-        algorithm="PPO",
+        algorithm="TD3",
         version="normal",
         layer_size=config.alg.layer_size,
         replay_buffer_size=int(1E6),
@@ -87,21 +116,12 @@ def main(config):
             num_train_loops_per_epoch=1,
             max_path_length=config.env.max_path_length,
             batch_size=256,
-            clear_buffer_every_train_loop=True,
         ),
         trainer_kwargs=dict(
-            epsilon=0.2,
             discount=config.discount,
-            policy_lr=3E-4,
-            val_lr=3E-4,
-            entropy_bonus=config.alg.entropy_bonus,
-        ),
-        target_kwargs=dict(
-            tdlambda=0.95,
-            target_lookahead=15,
         ),
         policy_kwargs=dict(
-            std=config.fixed_std,
+            hidden_sizes=[config.alg.layer_size, config.alg.layer_size],
         ),
     )
     setup_logger(config.name, variant=variant, log_dir='.')
