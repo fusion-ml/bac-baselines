@@ -1,0 +1,51 @@
+defaults:
+    - env: pendulum
+
+num_trials: 10
+dynamics_model:
+    model:
+        _target_: "mbrl.models.GaussianMLP"
+        device: "???"
+        num_layers: 3
+        ensemble_size: 5
+        hid_size: 200
+        use_silu: True
+        in_size: "???"
+        out_size: "???"
+        deterministic: False
+        propagation_method: "fixed_model"
+
+algorithm:
+    learned_rewards: False
+    target_is_delta: True
+    normalize: True
+
+overrides:
+    trial_length: env.max_path_length
+    num_steps: num_trials * env.max_path_length
+    model_batch_size: 32
+    validation_ratio: 0.05
+
+
+agent:
+    _target_: "mbrl.planning.TrajectoryOptimizerAgent"
+    planning_horizon: 15
+    replan_freq: 1
+    verbose: False
+    action_lb: "???"
+    action_ub: "???"
+    optimizer_cfg:
+      _target_: "mbrl.planning.CEMOptimizer"
+      num_iterations: 5
+      elite_ratio: 0.1
+      population_size: 500
+      alpha: 0.1
+      device: "???"
+      lower_bound: "???"
+      upper_bound: "???"
+      return_mean_elites: True
+hydra:
+  job:
+    name: ${name}
+  run:
+      dir: experiments/${name}_${now:%Y-%m-%d}/${now:%H-%M-%S}

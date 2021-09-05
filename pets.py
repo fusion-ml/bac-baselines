@@ -1,0 +1,103 @@
+import hydra
+import gym
+import torch
+import bax.envs  # NOQA
+from bax.util.misc_util import Dumper
+import mbrl.env.reward_fns as reward_fns
+import mbrl.models as models
+import mbrl.planning as planning
+import mbrl.util.common as common_util
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
+
+def never_termination_function(actions, next_observs):
+    return torch.Tensor([False] * actions.shape[0])
+
+@hydra.main(config_path='cfg', config_name='rlkit')
+def main(config):
+    dumper = Dumper(config.name)
+    env = gym.make(config.env.name)
+    obs_shape = env.observation_space.shape
+    act_shape = env.action_space.shape
+    # Create a 1-D dynamics model for this environment
+    dynamics_model = common_util.create_one_dim_tr_model(config, obs_shape, act_shape)
+
+    # TODO
+    reward_fn = None
+    # Create a gym-like environment to encapsulate the model
+    model_env = models.ModelEnv(env, dynamics_model, never_termination_function, reward_fn)
+
+    replay_buffer = common_util.create_replay_buffer(config, obs_shape, act_shape)
+
+    common_util.rollout_agent_trajectories(
+        env,
+        config.env.max_path_length,  # initial exploration steps
+        planning.RandomAgent(env),
+        {},  # keyword arguments to pass to agent.act()
+        replay_buffer=replay_buffer,
+        trial_length=config.env.max_path_length,
+    )
+
+    print("# samples stored", replay_buffer.num_stored)
+
+    agent_cfg = config.agent
+    agent = planning.create_trajectory_optim_agent_for_model(
+        model_env,
+        agent_cfg,
+        num_particles=20
+    )
+    train_losses = []
+    val_scores = []
+
+    def train_callback(_model, _total_calls, _epoch, tr_loss, val_score, _best_val):
+        train_losses.append(tr_loss)
+        val_scores.append(val_score.mean().item())   # this returns val score per ensemble model
+
+    # Create a trainer for the model
+    model_trainer = models.ModelTrainer(dynamics_model, optim_lr=1e-3, weight_decay=5e-5)
+    # Main PETS loop
+    for trial in range(config.num_trials):
+        obs = env.reset()
+        agent.reset()
+
+        done = False
+        total_reward = 0.0
+        steps_trial = 0
+        while not done:
+            # --------------- Model Training -----------------
+            if steps_trial == 0:
+                dynamics_model.update_normalizer(replay_buffer.get_all())  # update normalizer stats
+
+                dataset_train, dataset_val = common_util.get_basic_buffer_iterators(
+                    replay_buffer,
+                    batch_size=config.overrides.model_batch_size,
+                    val_ratio=config.overrides.validation_ratio,
+                    ensemble_size=config.model.ensemble_size,
+                    shuffle_each_epoch=True,
+                    bootstrap_permutes=False,  # build bootstrap dataset using sampling with replacement
+                )
+
+                model_trainer.train(
+                    dataset_train,
+                    dataset_val=dataset_val,
+                    num_epochs=50,
+                    patience=50,
+                    callback=train_callback)
+
+            # --- Doing env step using the agent and adding to model dataset ---
+            next_obs, reward, done, _ = common_util.step_env_and_add_to_buffer(
+                env, obs, agent, {}, replay_buffer)
+
+            obs = next_obs
+            total_reward += reward
+            steps_trial += 1
+
+            if steps_trial == config.env.max_path_length:
+                break
+
+        dumper.add('Eval Returns', [total_reward])
+        dumper.save()
+
+
+if __name__ == '__main__':
+    main()
