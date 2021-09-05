@@ -1,2 +1,3 @@
 name: "bacrobot-v0"
 timesteps: 100000
+max_path_length: 200
