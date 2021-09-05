@@ -1,17 +1,45 @@
 import hydra
 import gym
 import torch
+import numpy as np
 import bax.envs  # NOQA
 from bax.util.misc_util import Dumper
-import mbrl.env.reward_fns as reward_fns
 import mbrl.models as models
 import mbrl.planning as planning
 import mbrl.util.common as common_util
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 
+def angle_normalize(x):
+    return (((x+np.pi) % (2*np.pi)) - np.pi)
+
+
+def pets_pend_reward(actions, next_obs):
+    th = next_obs[..., 0]
+    thdot = next_obs[..., 1]
+    u = actions[..., 0]
+    costs = angle_normalize(th) ** 2 + 0.1 * thdot ** 2 + 0.001 * (u ** 2)
+    return -costs
+
+
+def pets_cartpole_reward(actions, next_obs):
+    pass
+
+
+def pets_reacher_reward(actions, next_obs):
+    pass
+
+
+reward_functions = {
+        'bacpendulum-v0': pets_pend_reward,
+        'pilcocartpole-trig-v0': pets_cartpole_reward,
+        'reacher-v0': pets_reacher_reward,
+        }
+
+
 def never_termination_function(actions, next_observs):
     return torch.Tensor([False] * actions.shape[0])
+
 
 @hydra.main(config_path='cfg', config_name='rlkit')
 def main(config):
@@ -23,7 +51,7 @@ def main(config):
     dynamics_model = common_util.create_one_dim_tr_model(config, obs_shape, act_shape)
 
     # TODO
-    reward_fn = None
+    reward_fn = reward_functions[config.env.name]
     # Create a gym-like environment to encapsulate the model
     model_env = models.ModelEnv(env, dynamics_model, never_termination_function, reward_fn)
 
