@@ -1,7 +1,10 @@
 defaults:
-    - env: pendulum
+  - env: pendulum
 
+
+name: "default"
 num_trials: 10
+num_eval_trials: 5
 dynamics_model:
     model:
         _target_: "mbrl.models.GaussianMLP"
@@ -21,8 +24,8 @@ algorithm:
     normalize: True
 
 overrides:
-    trial_length: env.max_path_length
-    num_steps: num_trials * env.max_path_length
+    trial_length: ${env.max_path_length}
+    num_steps: 100000
     model_batch_size: 32
     validation_ratio: 0.05
 
@@ -34,6 +37,7 @@ agent:
     verbose: False
     action_lb: "???"
     action_ub: "???"
+    _recursive_: False
     optimizer_cfg:
       _target_: "mbrl.planning.CEMOptimizer"
       num_iterations: 5
