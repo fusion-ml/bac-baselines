@@ -64,6 +64,7 @@ reward_functions = {
         'bacpendulum-v0': pets_pend_reward,
         'pilcocartpole-v0': pets_cartpole_reward,
         'reacher-v0': pets_reacher_reward,
+        'lavapath-v0': pets_lava_path_reward,
         }
 
 
