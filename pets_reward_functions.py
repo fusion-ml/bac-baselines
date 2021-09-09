@@ -2,7 +2,9 @@ import numpy as np
 import gym
 import bax.envs  # NOQA
 import torch
+from torch import Tensor
 from bax.envs.pilco_cartpole import CartPoleSwingUpEnv
+from bax.envs.lava_path import in_lava, LavaPathEnv
 
 
 def angle_normalize(x):
@@ -21,7 +23,7 @@ def get_pole_pos(x):
 def pets_cartpole_reward(actions, next_obs):
     device = actions.device
     position = get_pole_pos(next_obs)
-    goal = torch.Tensor([[0.0, CartPoleSwingUpEnv.POLE_LENGTH]]).to(device)
+    goal = Tensor([[0.0, CartPoleSwingUpEnv.POLE_LENGTH]]).to(device)
     squared_distance = torch.sum((position - goal)**2, axis=-1)
     squared_sigma = 0.25**2
     costs = 1 - torch.exp(-0.5*squared_distance/squared_sigma)
@@ -33,11 +35,29 @@ def pets_pend_reward(actions, next_obs):
     thdot = next_obs[..., 1]
     u = actions[..., 0]
     costs = angle_normalize(th) ** 2 + 0.1 * thdot ** 2 + 0.001 * (u ** 2)
-    return -costs[None, :]
+    return -costs[:, None]
 
 
 def pets_reacher_reward(actions, next_obs):
     pass
+
+
+def in_lava(x):
+    lava_pits = [Tensor([[-10, -8], [-0.5, 8]]).to(x.device), Tensor([[0.5, -8], [10, 8]]).to(x.device)]
+    lava = Tensor([0] * x.shape[0]).bool().to(x.device)
+    for pit in lava_pits:
+        above_bottom = torch.all(x > pit[0, :], dim=1)
+        below_top = torch.all(x < pit[1, :], dim=1)
+        lava |= (above_bottom & below_top)
+    return lava
+
+def pets_lava_path_reward(actions, next_obs):
+    device = actions.device
+    x_prob = next_obs[..., :2]
+    lava = in_lava(x_prob)
+    goal = Tensor(LavaPathEnv.goal).to(device)
+    reward = -torch.sum((x_prob - goal) ** 2, axis=-1) / 800 + LavaPathEnv.lava_penalty * lava.int()
+    return reward[:, None]
 
 
 reward_functions = {
@@ -59,22 +79,18 @@ def test_env(name, fn):
         next_obss.append(next_obs)
         actions.append(action)
         rewards.append(rew)
-    next_obss = torch.Tensor(next_obss)
-    actions = torch.Tensor(actions)
-    rewards = torch.Tensor(rewards)[None, :]
+    next_obss = Tensor(next_obss)
+    actions = Tensor(actions)
+    rewards = Tensor(rewards)[:, None]
     pred_rewards = fn(actions, next_obss)
     assert torch.allclose(pred_rewards, rewards), f'pred_rewards: {pred_rewards}\nrewards: {rewards}'
+    print(f'passed for {name}')
 
 
-def test_cartpole():
-    pass
-
-
-def test_reacher():
-    pass
 
 
 if __name__ == '__main__':
+    test_env('lavapath-v0', pets_lava_path_reward)
     test_env('pilcocartpole-v0', pets_cartpole_reward)
     test_env('bacpendulum-v0', pets_pend_reward)
     test_env('reacher-v0', pets_reacher_reward)
