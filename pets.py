@@ -54,12 +54,10 @@ def main(config):
         agent_cfg,
         num_particles=20
     )
-    train_losses = []
-    val_scores = []
 
     def train_callback(_model, _total_calls, _epoch, tr_loss, val_score, _best_val):
-        train_losses.append(tr_loss)
-        val_scores.append(val_score.mean().item())   # this returns val score per ensemble model
+        dumper.add('Train Loss', tr_loss)
+        dumper.add('Val Score', val_score.mean().item())
 
     # Create a trainer for the model
     model_trainer = models.ModelTrainer(dynamics_model, optim_lr=1e-3, weight_decay=5e-5)
