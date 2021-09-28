@@ -1,0 +1,8 @@
+defaults:
+  - env: pendulum
+name: "pilco_default"
+num_rl_trials: 10
+init_random_rollouts: 3
+seed: 0
+num_basis_functions: 10
+num_eval_trials: 5
