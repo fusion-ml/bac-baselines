@@ -39,7 +39,11 @@ def pets_pend_reward(actions, next_obs):
 
 
 def pets_reacher_reward(actions, next_obs):
-    pass
+    reward_ctrl = -torch.square(actions).sum(axis=-1)
+    vec = next_obs[..., -2:]
+    reward_dist = -torch.linalg.norm(vec, dim=-1)
+    reward = reward_ctrl + reward_dist
+    return reward[:, None]
 
 
 def in_lava(x):
@@ -60,11 +64,22 @@ def pets_lava_path_reward(actions, next_obs):
     return reward[:, None]
 
 
+def pets_beta_tracking_reward(actions, next_obs, target=2):
+    BETA_IDX = 0
+    betas = next_obs[..., BETA_IDX]
+    iqr = 0.8255070447921753
+    median = 1.622602
+    betas = betas * iqr + median
+    return -1 * torch.abs(betas - target)[:, None]
+
+
 reward_functions = {
         'bacpendulum-v0': pets_pend_reward,
         'pilcocartpole-v0': pets_cartpole_reward,
-        'reacher-v0': pets_reacher_reward,
+        'bacreacher-v0': pets_reacher_reward,
+        'bacreacher-tight-v0': pets_reacher_reward,
         'lavapath-v0': pets_lava_path_reward,
+        'betatracking-v0': pets_beta_tracking_reward,
         }
 
 
@@ -94,4 +109,5 @@ if __name__ == '__main__':
     test_env('lavapath-v0', pets_lava_path_reward)
     test_env('pilcocartpole-v0', pets_cartpole_reward)
     test_env('bacpendulum-v0', pets_pend_reward)
-    test_env('reacher-v0', pets_reacher_reward)
+    test_env('bacreacher-v0', pets_reacher_reward)
+    test_env('betatracking-v0', pets_beta_tracking_reward)
