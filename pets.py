@@ -17,10 +17,14 @@ print(f"Device: {device}")
 
 @hydra.main(config_path='cfg', config_name='pets')
 def main(config):
+    # set seeds
+    np.random.seed(config.seed)
+    torch.manual_seed(config.seed)
     dumper = Dumper(config.name)
     config.dynamics_model.model.device = device
     config.agent.optimizer_cfg.device = device
     env = gym.make(config.env.name)
+    env.seed(config.seed)
     obs_shape = env.observation_space.shape
     act_shape = env.action_space.shape
     # Create a 1-D dynamics model for this environment

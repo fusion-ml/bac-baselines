@@ -5,9 +5,13 @@ name: "default"
 num_epochs: 1000
 discount: 0.999
 fixed_std: True
+seed: 0
 
 hydra:
   job:
     name: ${name}
   run:
       dir: experiments/${name}_${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+      dir: experiments/${name}_${now:%Y-%m-%d}/${now:%H-%M-%S}
+      subdir: seed_${hydra.job.num}

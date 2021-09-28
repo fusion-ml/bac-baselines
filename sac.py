@@ -3,9 +3,10 @@ Use SAC on BAC tasks
 """
 import hydra
 import gym
-import gym
+import torch
 import bax.envs
 from bax.util.misc_util import Dumper
+import numpy as np
 
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
@@ -87,6 +88,8 @@ def experiment(env_name, variant):
 
 @hydra.main(config_path='cfg', config_name='rlkit')
 def main(config):
+    torch.manual_seed(config.seed)
+    np.random.seed(config.seed)
     variant = dict(
         algorithm="SAC",
         version="normal",
