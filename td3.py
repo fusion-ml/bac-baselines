@@ -11,6 +11,7 @@ import numpy as np
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.envs.wrappers import NormalizedBoxEnv
+from rlkit.core import logger
 from rlkit.exploration_strategies.base import \
     PolicyWrappedWithExplorationStrategy
 from rlkit.exploration_strategies.gaussian_strategy import GaussianStrategy
@@ -127,6 +128,7 @@ def main(config):
             hidden_sizes=[config.alg.layer_size, config.alg.layer_size],
         ),
     )
+    logger.reset()
     setup_logger(config.name, variant=variant, log_dir='.')
     ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
     experiment(config.env.name, variant)

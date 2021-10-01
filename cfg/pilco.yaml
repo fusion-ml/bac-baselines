@@ -6,3 +6,11 @@ init_random_rollouts: 3
 seed: 0
 num_basis_functions: 10
 num_eval_trials: 5
+hydra:
+  job:
+    name: ${name}
+  run:
+      dir: experiments/${name}_${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+      dir: experiments/${name}_${now:%Y-%m-%d}/${now:%H-%M-%S}
+      subdir: seed_${hydra.job.num}

@@ -1,6 +1,7 @@
 import hydra
 import numpy as np
 import gym
+import bax.envs
 from bax.util.misc_util import Dumper
 from pilco.models import PILCO
 from pilco.controllers import RbfController, LinearController
@@ -50,9 +51,9 @@ def main(config):
     dumper = Dumper(config.name)
     horizon = config.env.max_path_length
     # Initial random rollouts to generate a dataset
-    X,Y, _, _ = rollout(env=env, pilco=None, random=True, timesteps=horizon, render=False)
+    X,Y, _, _ = rollout(env=env, pilco=None, random=True, timesteps=horizon, render=False, verbose=False)
     for i in range(config.init_random_rollouts):
-        X_, Y_, _, _ = rollout(env=env, pilco=None, random=True,  timesteps=horizon, render=False)
+        X_, Y_, _, _ = rollout(env=env, pilco=None, random=True,  timesteps=horizon, render=False, verbose=False)
         X = np.vstack((X, X_))
         Y = np.vstack((Y, Y_))
 
@@ -75,7 +76,7 @@ def main(config):
         eval_returns = []
         pbar = trange(config.num_eval_trials)
         for _ in trange(config.num_eval_trials):
-            X_new, Y_new, _, ep_return = rollout(env=env, pilco=pilco, timesteps=horizon, render=False)
+            X_new, Y_new, _, ep_return = rollout(env=env, pilco=pilco, timesteps=horizon, render=False, verbose=False)
             eval_returns.append(ep_return)
         stats = {"Mean Return": np.mean(eval_returns), "Std Return:": np.std(eval_returns)}
         pbar.set_postfix(stats)
@@ -85,3 +86,7 @@ def main(config):
         # Update dataset
         X = np.vstack((X, X_new)); Y = np.vstack((Y, Y_new))
         pilco.mgpr.set_data((X, Y))
+
+
+if __name__ == '__main__':
+    main()

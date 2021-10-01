@@ -12,6 +12,7 @@ import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.envs.wrappers import NormalizedBoxEnv
 from rlkit.launchers.launcher_util import setup_logger
+from rlkit.core import logger
 from rlkit.samplers.data_collector import MdpPathCollector
 from rlkit.torch.sac.policies import TanhGaussianPolicy, MakeDeterministic
 from rlkit.torch.sac.sac import SACTrainer
@@ -115,6 +116,7 @@ def main(config):
             use_automatic_entropy_tuning=True,
         ),
     )
+    logger.reset()
     setup_logger(config.name, variant=variant, log_dir='.')
     ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
     experiment(config.env.name, variant)
