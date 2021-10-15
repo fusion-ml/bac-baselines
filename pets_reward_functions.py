@@ -72,6 +72,9 @@ def pets_beta_tracking_reward(actions, next_obs, target=2):
     betas = betas * iqr + median
     return -1 * torch.abs(betas - target)[:, None]
 
+def pets_swimmer_reward(actions, next_obs):
+    return next_obs[..., -1]
+
 
 reward_functions = {
         'bacpendulum-v0': pets_pend_reward,
@@ -80,6 +83,7 @@ reward_functions = {
         'bacreacher-tight-v0': pets_reacher_reward,
         'lavapath-v0': pets_lava_path_reward,
         'betatracking-v0': pets_beta_tracking_reward,
+        'bacswimmer-rew-v0': pets_swimmer_reward,
         }
 
 
