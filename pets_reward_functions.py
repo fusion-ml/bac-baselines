@@ -74,7 +74,7 @@ def pets_beta_tracking_reward(actions, next_obs, target=2):
 
 
 def pets_swimmer_reward(actions, next_obs):
-    return next_obs[..., -1]
+    return next_obs[..., -1][:, None]
 
 
 def pets_plasma_tracking_reward(actions, next_obs):
