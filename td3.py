@@ -2,14 +2,16 @@
 Use SAC on BAC tasks
 """
 import hydra
-import gym
+import torch
 import gym
 import bax.envs
 from bax.util.misc_util import Dumper
+import numpy as np
 
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
 from rlkit.envs.wrappers import NormalizedBoxEnv
+from rlkit.core import logger
 from rlkit.exploration_strategies.base import \
     PolicyWrappedWithExplorationStrategy
 from rlkit.exploration_strategies.gaussian_strategy import GaussianStrategy
@@ -102,6 +104,8 @@ def experiment(env_name, variant):
 
 @hydra.main(config_path='cfg', config_name='rlkit')
 def main(config):
+    torch.manual_seed(config.seed)
+    np.random.seed(config.seed)
     variant = dict(
         algorithm="TD3",
         version="normal",
@@ -124,6 +128,7 @@ def main(config):
             hidden_sizes=[config.alg.layer_size, config.alg.layer_size],
         ),
     )
+    logger.reset()
     setup_logger(config.name, variant=variant, log_dir='.')
     ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
     experiment(config.env.name, variant)

@@ -1,0 +1,3 @@
+name: "bacreacher-tight-v0"
+timesteps: 3000000
+max_path_length: 50

@@ -72,8 +72,17 @@ def pets_beta_tracking_reward(actions, next_obs, target=2):
     betas = betas * iqr + median
     return -1 * torch.abs(betas - target)[:, None]
 
+
 def pets_swimmer_reward(actions, next_obs):
     return next_obs[..., -1]
+
+
+def pets_plasma_tracking_reward(actions, next_obs):
+    device = actions.device
+    idxes = [0, 2]
+    signals = next_obs[:, idxes]
+    targets = Tensor([[0.4544037912481128, 0.515012974224002]]).to(device)
+    return -1 * torch.sum(torch.abs(signals - targets), axis=1)[:, None]
 
 
 reward_functions = {
@@ -84,6 +93,7 @@ reward_functions = {
         'lavapath-v0': pets_lava_path_reward,
         'betatracking-v0': pets_beta_tracking_reward,
         'bacswimmer-rew-v0': pets_swimmer_reward,
+        'plasmatracking-v0': pets_plasma_tracking_reward,
         }
 
 
@@ -115,3 +125,4 @@ if __name__ == '__main__':
     test_env('bacpendulum-v0', pets_pend_reward)
     test_env('bacreacher-v0', pets_reacher_reward)
     test_env('betatracking-v0', pets_beta_tracking_reward)
+    test_env('plasmatracking-v0', pets_plasma_tracking_reward)

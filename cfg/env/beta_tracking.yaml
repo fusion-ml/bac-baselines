@@ -1,0 +1,3 @@
+name: 'betatracking-v0'
+timesteps: 50000
+max_path_length: 30

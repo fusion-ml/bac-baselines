@@ -2,13 +2,15 @@
 Use PPO on BAC tasks
 """
 import hydra
-import gym
+import torch
 import gym
 import bax.envs
 from bax.util.misc_util import Dumper
+import numpy as np
 
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.advantage_buffer import AdvantageReplayBuffer
+from rlkit.core import logger
 from rlkit.envs.wrappers import NormalizedBoxEnv
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.samplers.data_collector import MdpPathCollector
@@ -73,6 +75,8 @@ def experiment(env_name, variant):
 
 @hydra.main(config_path='cfg', config_name='rlkit')
 def main(config):
+    torch.manual_seed(config.seed)
+    np.random.seed(config.seed)
     variant = dict(
         algorithm="PPO",
         version="normal",
@@ -104,6 +108,7 @@ def main(config):
             std=config.fixed_std,
         ),
     )
+    logger.reset()
     setup_logger(config.name, variant=variant, log_dir='.')
     ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
     experiment(config.env.name, variant)

@@ -18,6 +18,8 @@ dynamics_model:
         deterministic: False
         propagation_method: "fixed_model"
 
+seed: 0
+
 algorithm:
     learned_rewards: False
     target_is_delta: True
@@ -53,3 +55,6 @@ hydra:
     name: ${name}
   run:
       dir: experiments/${name}_${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+      dir: experiments/${name}_${now:%Y-%m-%d}/${now:%H-%M-%S}
+      subdir: seed_${hydra.job.num}
