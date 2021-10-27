@@ -3,9 +3,9 @@ import logging
 import gym
 import torch
 import numpy as np
-import bax.envs  # NOQA
+import barl.envs  # NOQA
 from tqdm import trange
-from bax.util.misc_util import Dumper
+from barl.util.misc_util import Dumper
 from pets_reward_functions import reward_functions
 import mbrl.models as models
 import mbrl.planning as planning

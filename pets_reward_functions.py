@@ -1,10 +1,10 @@
 import numpy as np
 import gym
-import bax.envs  # NOQA
+import barl.envs  # NOQA
 import torch
 from torch import Tensor
-from bax.envs.pilco_cartpole import CartPoleSwingUpEnv
-from bax.envs.lava_path import in_lava, LavaPathEnv
+from barl.envs.pilco_cartpole import CartPoleSwingUpEnv
+from barl.envs.lava_path import in_lava, LavaPathEnv
 
 
 def angle_normalize(x):

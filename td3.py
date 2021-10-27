@@ -4,8 +4,8 @@ Use SAC on BAC tasks
 import hydra
 import torch
 import gym
-import bax.envs
-from bax.util.misc_util import Dumper
+import barl.envs
+from barl.util.misc_util import Dumper
 import numpy as np
 
 import rlkit.torch.pytorch_util as ptu

@@ -1,8 +1,8 @@
 import hydra
 import numpy as np
 import gym
-import bax.envs
-from bax.util.misc_util import Dumper
+import barl.envs
+from barl.util.misc_util import Dumper
 from pilco.models import PILCO
 from pilco.controllers import RbfController, LinearController
 from pilco.rewards import ExponentialReward
