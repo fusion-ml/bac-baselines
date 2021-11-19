@@ -5,7 +5,6 @@ from pilco.controllers import RbfController, LinearController
 from pilco.rewards import ExponentialReward
 import barl.envs
 import tensorflow as tf
-from utils import rollout, policy
 from gpflow import set_trainable
 np.random.seed(0)
 
@@ -15,6 +14,37 @@ np.random.seed(0)
 # Introduces subsampling with the parameter SUBS and modified rollout function
 # Introduces priors for better conditioning of the GP model
 # Uses restarts
+
+def rollout(env, pilco, timesteps, verbose=True, random=False, SUBS=1, render=False):
+        X = []; Y = [];
+        x = env.reset()
+        ep_return_full = 0
+        ep_return_sampled = 0
+        for timestep in range(timesteps):
+            if render: env.render()
+            u = policy(env, pilco, x, random)
+            for i in range(SUBS):
+                x_new, r, done, _ = env.step(u)
+                ep_return_full += r
+                if done: break
+                if render: env.render()
+            if verbose:
+                print("Action: ", u)
+                print("State : ", x_new)
+                print("Return so far: ", ep_return_full)
+            X.append(np.hstack((x, u)))
+            Y.append(x_new - x)
+            ep_return_sampled += r
+            x = x_new
+            if done: break
+        return np.stack(X), np.stack(Y), ep_return_sampled, ep_return_full
+
+
+def policy(env, pilco, x, random):
+    if random:
+        return env.action_space.sample()
+    else:
+        return pilco.compute_action(x[None, :])[0, :]
 
 class myCartpole():
     def __init__(self):
@@ -50,9 +80,9 @@ if __name__=='__main__':
     env = myCartpole()
 
     # Initial random rollouts to generate a dataset
-    X, Y, _, _ = rollout(env, None, timesteps=T, random=True, SUBS=SUBS, render=True)
+    X, Y, _, _ = rollout(env, None, timesteps=T, random=True, SUBS=SUBS, render=False)
     for i in range(1,J):
-        X_, Y_, _, _ = rollout(env, None, timesteps=T, random=True, SUBS=SUBS, verbose=True, render=True)
+        X_, Y_, _, _ = rollout(env, None, timesteps=T, random=True, SUBS=SUBS, verbose=True, render=False)
         X = np.vstack((X, X_))
         Y = np.vstack((Y, Y_))
 
@@ -77,7 +107,8 @@ if __name__=='__main__':
         pilco.optimize_models(maxiter=maxiter, restarts=2)
         pilco.optimize_policy(maxiter=maxiter, restarts=2)
 
-        X_new, Y_new, _, _ = rollout(env, pilco, timesteps=T_sim, verbose=True, SUBS=SUBS, render=True)
+        X_new, Y_new, _, _ = rollout(env, pilco, timesteps=T_sim, verbose=True, SUBS=SUBS, render=False)
+        breakpoint()
         X_new = X_new.astype(np.float64)
         Y_new = Y_new.astype(np.float64)
 

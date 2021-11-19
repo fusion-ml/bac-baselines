@@ -60,8 +60,9 @@ def main(config):
     )
 
     def train_callback(_model, _total_calls, _epoch, tr_loss, val_score, _best_val):
-        dumper.add('Train Loss', tr_loss)
-        dumper.add('Val Score', val_score.mean().item())
+        pass
+        # dumper.add('Train Loss', tr_loss)
+        # dumper.add('Val Score', val_score.mean().item())
 
     # Create a trainer for the model
     model_trainer = models.ModelTrainer(dynamics_model, optim_lr=1e-3, weight_decay=5e-5)
