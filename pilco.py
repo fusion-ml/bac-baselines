@@ -91,8 +91,8 @@ def main(config):
         for _ in trange(config.num_eval_trials):
             X_new, Y_new, _, ep_return = rollout(env=env, pilco=pilco, timesteps=horizon, render=False, SUBS=config.env.SUBS, verbose=False)
             eval_returns.append(ep_return)
-        stats = {"Mean Return": np.mean(eval_returns), "Std Return:": np.std(eval_returns)}
-        pbar.set_postfix(stats)
+            stats = {"Mean Return": np.mean(eval_returns), "Std Return:": np.std(eval_returns)}
+            pbar.set_postfix(stats)
         dumper.add("Eval Returns", eval_returns)
         dumper.add("Eval ndata", X.shape[0])
         dumper.save()
