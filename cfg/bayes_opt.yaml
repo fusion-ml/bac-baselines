@@ -1,0 +1,14 @@
+defaults:
+  - env: weird_gain
+name: "default"
+num_trials: 10
+seed: 0
+max_episodes: 100
+hydra:
+  job:
+    name: ${name}
+  run:
+      dir: experiments/${name}_${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+      dir: experiments/${name}_${now:%Y-%m-%d}/${now:%H-%M-%S}
+      subdir: seed_${hydra.job.num}
