@@ -2,7 +2,7 @@ defaults:
   - env: weird_gain
 name: "default"
 num_trials: 10
-seed: 0
+seed: 13
 max_episodes: 100
 hydra:
   job:
