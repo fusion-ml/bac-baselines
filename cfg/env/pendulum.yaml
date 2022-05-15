@@ -5,4 +5,4 @@ target: [1, 0, 0]
 weights: [2, 2, 0.3]
 m_init: [-1., 0, 0]
 s_init: [0.01, 0.05, 0.01]
-SUBS: 2
+SUBS: 3

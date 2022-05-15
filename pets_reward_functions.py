@@ -73,6 +73,20 @@ def pets_beta_tracking_reward(actions, next_obs, target=2):
     return -1 * torch.abs(betas - target)[:, None]
 
 
+def pets_beta_rotation_tracking_reward(actions, next_obs):
+    BETA_IDX = 0
+    ROT_IDX = 1
+    BETA_TGT_IDX = 8
+    ROT_TGT_IDX = 9
+    betas = next_obs[..., BETA_IDX]
+    beta_tgts = next_obs[..., BETA_TGT_IDX]
+    rots = next_obs[..., ROT_IDX]
+    rot_tgts = next_obs[..., ROT_TGT_IDX]
+    costs = torch.abs(betas - beta_tgts) + torch.abs(rots - rot_tgts)
+    return -1 * costs[:, None]
+
+
+
 def pets_swimmer_reward(actions, next_obs):
     return next_obs[..., -1][:, None]
 
@@ -94,6 +108,7 @@ reward_functions = {
         'betatracking-v0': pets_beta_tracking_reward,
         'bacswimmer-rew-v0': pets_swimmer_reward,
         'plasmatracking-v0': pets_plasma_tracking_reward,
+        'newbetarotation-v0': pets_beta_rotation_tracking_reward,
         }
 
 
@@ -126,3 +141,4 @@ if __name__ == '__main__':
     test_env('bacreacher-v0', pets_reacher_reward)
     test_env('betatracking-v0', pets_beta_tracking_reward)
     test_env('plasmatracking-v0', pets_plasma_tracking_reward)
+    test_env('newbetarotation-v0', pets_beta_rotation_tracking_reward)

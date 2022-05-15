@@ -1,7 +1,7 @@
 import hydra
 import gym
 import numpy as np
-from dragonfly import maximise_function
+# from dragonfly import maximise_function
 from skopt import gp_minimize
 import barl.envs
 from functools import partial
@@ -28,19 +28,21 @@ def neg_eval_function(action_sequence, env, start_state):
 
 @hydra.main(config_path="cfg", config_name="bayes_opt")
 def main(config):
-    np.random.seed(config.seed)
+    import barl.envs
+    np.random.seed(config.seed + 15)
     env = NormalizedBoxEnv(gym.make(config.env.name))
     env.seed(config.seed)
+    start_state = env.reset()
     action_dim = env.action_space.low.size
     horizon = env.horizon
     domain = [[-1, 1]] * action_dim * horizon
-    start_state = env.reset()
     print(f"{start_state=}")
     dumper = Dumper(config.name)
     objfn = partial(neg_eval_function, env=env, start_state=start_state)
-    for capital in trange(10, config.max_episodes):
+    for capital in trange(1, config.max_episodes):
         res = gp_minimize(objfn,
                           domain,
+                          n_initial_points=1,
                           n_calls=capital,
                           random_state=config.seed)
         # max_val, max_pt, history = maximise_function(objfn, domain, capital)
