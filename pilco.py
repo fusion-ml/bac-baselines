@@ -43,12 +43,18 @@ def policy(env, pilco, x, random):
     else:
         return pilco.compute_action(x[None, :])[0, :]
 
+def assign_variance(models, variance):
+    for model in models:
+        model.likelihood.variance.assign(variance)
+        set_trainable(model.likelihood.variance, False)
+
 @hydra.main(config_path='cfg', config_name='pilco')
 def main(config):
     # set seeds
     np.random.seed(config.seed)
     tf.random.set_seed(config.seed)
-    env = NormalizedEnv(gym.make(config.env.name))
+    env_name = config.env.name if config.env.name != 'bacpendulum-v0' else 'Pendulum-v1'
+    env = NormalizedEnv(gym.make(env_name))
     dumper = Dumper(config.name)
     horizon = config.env.max_path_length
     target = np.array(config.env.target).astype(np.float64)
@@ -57,9 +63,11 @@ def main(config):
     s_init = np.diag(config.env.s_init).astype(np.float64)
     restarts = 2
     maxiter = 50
-    max_action = 1.
+    max_action = 1. if config.env.name != 'bacpendulum-v0' else 2.
     # Initial random rollouts to generate a dataset
     X,Y, _, _ = rollout(env=env, pilco=None, random=True, timesteps=horizon, render=False, SUBS=config.env.SUBS, verbose=False)
+    X = X[:10, ...]
+    Y = Y[:10, ...]
     for i in range(config.init_random_rollouts):
         X_, Y_, _, _ = rollout(env=env, pilco=None, random=True,  timesteps=horizon, render=False, SUBS=config.env.SUBS, verbose=False)
         X = np.vstack((X, X_))
@@ -78,13 +86,17 @@ def main(config):
     # Example of user provided reward function, setting a custom target state
     # R = ExponentialReward(state_dim=state_dim, t=np.array([0.1,0,0,0]))
     # pilco = PILCO(X, Y, controller=controller, horizon=40, reward=R)
-    for model in pilco.mgpr.models:
-        model.likelihood.variance.assign(0.001)
-        set_trainable(model.likelihood.variance, False)
+    variance = 0.001
+    assign_variance(pilco.mgpr.models, variance)
 
     for rollouts in range(config.num_rl_trials):
         pilco.optimize_models(maxiter=maxiter, restarts=restarts)
-        pilco.optimize_policy(maxiter=maxiter, restarts=restarts)
+        try:
+            pilco.optimize_policy(maxiter=maxiter, restarts=restarts)
+        except Exception:
+            variance *= 10
+            assign_variance(pilco.mgpr.models, variance)
+            pilco.optimize_policy(maxiter=maxiter, restarts=restarts)
 
         eval_returns = []
         pbar = trange(config.num_eval_trials)

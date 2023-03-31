@@ -85,7 +85,6 @@ def experiment(env_name, variant):
     )
     algorithm.to(ptu.device)
     algorithm.train()
-    breakpoint()
 
 
 @hydra.main(config_path='cfg', config_name='rlkit')
